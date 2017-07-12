@@ -6,6 +6,10 @@ import scipy.sparse.linalg
 import functools
 import numexpr as ne
 
+# Do we want these lazily imported within functions below?
+from tvtk.api import tvtk
+from tvtk.common import configure_input
+
 def _memo(fn):
     """Helper decorator memoizes the given zero-argument function.
     Really helpful for memoizing properties so they don't have to be recomputed
@@ -856,9 +860,13 @@ def face_volume(pts1, pts2, polys):
     return vols
 
 def decimate(pts, polys):
-    from tvtk.api import tvtk
     pd = tvtk.PolyData(points=pts, polys=polys)
-    dec = tvtk.DecimatePro(input=pd)
+    # Old:
+    #dec = tvtk.DecimatePro(input=pd)
+    # New:
+    dec = tvtk.DecimatePro()
+    configure_input(dec, pd)
+    # /New
     dec.set(preserve_topology=True, splitting=False, boundary_vertex_deletion=False, target_reduction=1.0)
     dec.update()
     dpts = dec.output.points.to_array()
@@ -952,13 +960,15 @@ def voxelize(pts, polys, shape=(256, 256, 256), center=(128, 128, 128), mp=True)
     
     pd = tvtk.PolyData(points=pts + center + (0, 0, 0), polys=polys)
     plane = tvtk.Planes(normals=[(0,0,1)], points=[(0,0,0)])
-    clip = tvtk.ClipPolyData(clip_function=plane, input=pd)
+    clip = tvtk.ClipPolyData(clip_function=plane) #, input=pd)
+    configure_input(clip, pd)
     feats = tvtk.FeatureEdges(
         manifold_edges=False, 
         non_manifold_edges=False, 
         feature_edges=False,
-        boundary_edges=True,
-        input=clip.output)
+        boundary_edges=True) #,
+        #input=clip.output)
+    configure_input(feats, clip)
 
     def func(i):
         plane.points = [(0,0,i)]
@@ -980,14 +990,14 @@ def voxelize(pts, polys, shape=(256, 256, 256), center=(128, 128, 128), mp=True)
     return np.array(layers).T
 
 def measure_volume(pts, polys):
-    from tvtk.api import tvtk
+    #from tvtk.api import tvtk
     pd = tvtk.PolyData(points=pts, polys=polys)
-    mp = tvtk.MassProperties(input=pd)
+    mp = tvtk.MassProperties() #input=pd)
+    configure_input(mp, pd)
     return mp.volume
 
 def marching_cubes(volume, smooth=True, decimate=True, **kwargs):
-    from tvtk.api import tvtk
-    from tvtk.common import configure_input
+    #from tvtk.api import tvtk
     imgdata = tvtk.ImageData(dimensions=volume.shape)
     imgdata.point_data.scalars = volume.flatten('F')
 
@@ -999,8 +1009,12 @@ def marching_cubes(volume, smooth=True, decimate=True, **kwargs):
         smoothargs = dict(number_of_iterations=40, feature_angle = 90, pass_band=.05)
         smoothargs.update(kwargs)
         contours = tvtk.WindowedSincPolyDataFilter(input=contours.output, **smoothargs)
+        # seems like we need configure_inputs here, but unclear how to do this...?
+        # configure_input(contours, contours) 
     if decimate:
         contours = tvtk.QuadricDecimation(input=contours.output, target_reduction=.75)
+        # (also here) seems like we need configure_inputs here, but unclear how to do this...?
+        # configure_input(contours, contours) 
     
     contours.update()
     pts = contours.output.points.to_array()
