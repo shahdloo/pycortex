@@ -243,8 +243,8 @@ class Axis(HasTraits):
     ipw = Instance(PipelineBase)
     cursor = Instance(Module)
     surf = Instance(PipelineBase)
-    outline = Instance(PipelineBase)
-    slab = Instance(tvtk.ClipPolyData)
+    # outline = Instance(PipelineBase)
+    # slab = Instance(tvtk.ClipPolyData)
     handle = Instance(RotationWidget)
     planes = List
 
@@ -253,15 +253,15 @@ class Axis(HasTraits):
     disable_render = DelegatesTo('parent')
     xfm = DelegatesTo('parent')
 
-    outline_color = DelegatesTo('parent')
-    outline_rep = DelegatesTo('parent')
-    line_width = DelegatesTo('parent')
-    point_size = DelegatesTo('parent')
+    # outline_color = DelegatesTo('parent')
+    # outline_rep = DelegatesTo('parent')
+    # line_width = DelegatesTo('parent')
+    # point_size = DelegatesTo('parent')
 
     def __init__(self, **kwargs):
         super(Axis, self).__init__(**kwargs)
-        self.slab
-        self.outline
+    #     self.slab
+    #     self.outline
         self.ipw_3d
         self.ipw
         self._last = -1
@@ -305,7 +305,7 @@ class Axis(HasTraits):
 
         self.scene.interactor.add_observer("MouseMoveEvent", focusfunc)
         self.scene.interactor.add_observer("KeyReleaseEvent", self.handle_keys)
-        self._outline_color_changed()
+        # self._outline_color_changed()
 
     def handle_keys(self, evt, name):
         key, sym = evt.GetKeyCode(), evt.GetKeySym()
@@ -340,8 +340,8 @@ class Axis(HasTraits):
             self.next_slice()
         elif key == '[':
             self.prev_slice()
-        elif key == 'H':
-            self.parent.outlines_visible = not self.parent.outlines_visible
+        # elif key == 'H':
+        #     self.parent.outlines_visible = not self.parent.outlines_visible
         elif key == 'Z' and evt.GetControlKey() == 1:
             self.parent.undo()
         
@@ -351,7 +351,7 @@ class Axis(HasTraits):
     @on_trait_change("parent.scene_3d.activated")
     def activate_3d(self):
         self.ipw_3d.ipw.interaction = 0
-        self.surf
+    #     self.surf
 
     def _planes_default(self):
         pos = [0, 0, 0]
@@ -365,63 +365,65 @@ class Axis(HasTraits):
         bot = tvtk.Planes(normals=[vec[:]], points=[pos[:]])
         return [top, bot]
 
-    def _slab_default(self):
-        top = tvtk.ClipPolyData(clip_function=self.planes[0], inside_out=1)
-        configure_input(top, self.parent.surf.parent.parent.filter)
-        bot = tvtk.ClipPolyData(clip_function=self.planes[1], inside_out=1)
-        configure_input(bot, top)
-        bot.update()
-        return bot
+    # def _slab_default(self):
+    #     top = tvtk.ClipPolyData(clip_function=self.planes[0], inside_out=1)
+    #     configure_input(top, self.parent.surf.parent.parent.filter)
+    #     bot = tvtk.ClipPolyData(clip_function=self.planes[1], inside_out=1)
+    #     configure_input(bot, top)
+    #     bot.update()
+    #     return bot
 
-    def _outline_default(self):
-        origin, spacing = self.parent.origin, self.parent.spacing
-        translate = origin * np.sign(spacing) - np.abs(spacing) / 2.
+    # def _outline_default(self):
+    #     origin, spacing = self.parent.origin, self.parent.spacing
+    #     translate = origin * np.sign(spacing) - np.abs(spacing) / 2.
 
-        mlab.figure(self.scene.mayavi_scene)
-        if self.slab.output.points is None or len(self.slab.output.points) < 3:
-            pts = np.array([[0, 0, 0], [0, 0, 0], [0,0,0]])
-            polys = [[0, 1, 2]]
-        else:
-            pts = self.slab.output.points.to_array()
-            polys = self.slab.output.polys.to_array().reshape(-1, 4)[:,1:]
-        src = mlab.pipeline.triangular_mesh_source(pts[:,0], pts[:,1], pts[:,2], polys, 
-            figure=self.scene.mayavi_scene)
-        xfm = mlab.pipeline.transform_data(src, figure=self.scene.mayavi_scene)
-        xfm.filter.transform.post_multiply()
-        xfm.filter.transform.translate(-translate)
-        xfm.widget.enabled = False
-        surf = mlab.pipeline.surface(xfm, 
-            figure=self.scene.mayavi_scene, 
-            color=(1,1,1),
-            representation=self.outline_rep)
-        surf.actor.property.line_width = self.line_width
-        surf.actor.property.point_size = self.point_size
-        return src
+    #     mlab.figure(self.scene.mayavi_scene)
+    #     if self.slab.output.points is None or len(self.slab.output.points) < 3:
+    #         pts = np.array([[0, 0, 0], [0, 0, 0], [0,0,0]])
+    #         polys = [[0, 1, 2]]
+    #     else:
+    #         pts = self.slab.output.points.to_array()
+    #         polys = self.slab.output.polys.to_array().reshape(-1, 4)[:,1:]
+    #     src = mlab.pipeline.triangular_mesh_source(pts[:,0], pts[:,1], pts[:,2], polys, 
+    #         figure=self.scene.mayavi_scene)
+    #     xfm = mlab.pipeline.transform_data(src, figure=self.scene.mayavi_scene)
+    #     xfm.filter.transform.post_multiply()
+    #     xfm.filter.transform.translate(-translate)
+    #     xfm.widget.enabled = False
+    #     surf = mlab.pipeline.surface(xfm, 
+    #         figure=self.scene.mayavi_scene, 
+    #         color=(1,1,1),
+    #         representation=self.outline_rep)
+    #     surf.actor.property.line_width = self.line_width
+    #     surf.actor.property.point_size = self.point_size
+    #     return src
 
-    def _surf_default(self):
-        if self.slab.output.points is None or len(self.slab.output.points) < 3:
-            pts = np.array([[0, 0, 0], [0, 0, 0], [0,0,0]])
-            polys = [[0, 1, 2]]
-        else:
-            pts = self.slab.output.points.to_array()
-            polys = self.slab.output.polys.to_array().reshape(-1, 4)[:,1:]
-        src = mlab.pipeline.triangular_mesh_source(pts[:,0], pts[:,1], pts[:,2], polys, 
-            figure=self.scene_3d.mayavi_scene)
-        surf = mlab.pipeline.surface(src, 
-            color=(1,1,1), 
-            figure=self.scene_3d.mayavi_scene, 
-            representation=self.outline_rep)
-        surf.actor.property.line_width = self.line_width
-        surf.actor.property.point_size = self.point_size
-        return src
+    # def _surf_default(self):
+    #     if self.slab.output.points is None or len(self.slab.output.points) < 3:
+    #         pts = np.array([[0, 0, 0], [0, 0, 0], [0,0,0]])
+    #         polys = [[0, 1, 2]]
+    #     else:
+    #         pts = self.slab.output.points.to_array()
+    #         polys = self.slab.output.polys.to_array().reshape(-1, 4)[:,1:]
+    #     src = mlab.pipeline.triangular_mesh_source(pts[:,0], pts[:,1], pts[:,2], polys, 
+    #         figure=self.scene_3d.mayavi_scene)
+    #     surf = mlab.pipeline.surface(src, 
+    #         color=(1,1,1), 
+    #         figure=self.scene_3d.mayavi_scene, 
+    #         representation=self.outline_rep)
+    #     surf.actor.property.line_width = self.line_width
+    #     surf.actor.property.point_size = self.point_size
+    #     return src
 
     def _ipw_3d_default(self):
+        # Image plane widget = ipw
         spos = self.position + self.parent.origin * np.sign(self.parent.spacing)
         space = list(np.abs(self.parent.spacing))
         shape = list(np.array(self.parent.epi.shape) / self.parent.padshape)
         space.pop(self.axis)
         shape.pop(self.axis)
         if self.axis == 1:
+            # Flip Y axis (?)
             space = space[::-1]
             shape = shape[::-1]
 
@@ -438,7 +440,7 @@ class Axis(HasTraits):
         ipw.ipw.color_map.output_format = 'rgb'
         ipw.ipw.set(texture_interpolate=0, reslice_interpolate='nearest_neighbour', slice_position=spos[self.axis])
         ipw.ipw.reslice.set(output_spacing=space, output_origin=origin)
-        ipw.ipw.poly_data_algorithm.output.point_data.t_coords = shape
+    #     ipw.ipw.poly_data_algorithm.output.point_data.t_coords = shape
         return ipw
 
     def _ipw_default(self):
@@ -446,7 +448,8 @@ class Axis(HasTraits):
         extent.pop(self.axis)
         if self.axis == 1:
             extent = extent[::-1]
-
+        arrow = '===> '
+        print("%sImagePlaneWidget image extent for %s axis:\n%s%r"%('XYZ'[self.axis], arrow, arrow, extent))
         side_src = self.ipw_3d.ipw.reslice_output
         # Add a callback on the image plane widget interaction to
         # move the others
@@ -467,7 +470,7 @@ class Axis(HasTraits):
             name='Cut view %s' % self.axis)
         ipw.ipw.plane_property.opacity = 0
         ipw.ipw.selected_plane_property.opacity = 0
-        ipw.ipw.poly_data_algorithm.set(point1=[extent[0], 0, 0], point2=[0, extent[1], 0])
+    #     ipw.ipw.poly_data_algorithm.set(point1=[extent[0], 0, 0], point2=[0, extent[1], 0])
         ipw.ipw.set(
             left_button_action=0, 
             middle_button_auto_modifier=2, 
@@ -498,29 +501,29 @@ class Axis(HasTraits):
     def _disable_render_changed(self):
         self.scene.scene.disable_render = self.disable_render
 
-    def toggle_outline(self):
-        self.outline.children[0].children[0].visible = self.parent.outlines_visible
+    # def toggle_outline(self):
+    #     self.outline.children[0].children[0].visible = self.parent.outlines_visible
 
-    def _outline_color_changed(self):
-        try:
-            color = tuple([c/255. for c in tuple(self.outline_color)])
-        except TypeError:
-            color = self.outline_color.getRgbF()[:3]
+    # def _outline_color_changed(self):
+    #     try:
+    #         color = tuple([c/255. for c in tuple(self.outline_color)])
+    #     except TypeError:
+    #         color = self.outline_color.getRgbF()[:3]
 
-        self.surf.children[0].children[0].actor.property.color = color
-        self.outline.children[0].children[0].children[0].actor.property.color = color
+    #     self.surf.children[0].children[0].actor.property.color = color
+    #     self.outline.children[0].children[0].children[0].actor.property.color = color
 
-    def _outline_rep_changed(self):
-        self.surf.children[0].children[0].actor.property.representation = self.outline_rep
-        self.outline.children[0].children[0].children[0].actor.property.representation = self.outline_rep
+    # def _outline_rep_changed(self):
+    #     self.surf.children[0].children[0].actor.property.representation = self.outline_rep
+    #     self.outline.children[0].children[0].children[0].actor.property.representation = self.outline_rep
 
-    def _line_width_changed(self):
-        self.surf.children[0].children[0].actor.property.line_width = self.line_width
-        self.outline.children[0].children[0].children[0].actor.property.line_width = self.line_width
+    # def _line_width_changed(self):
+    #     self.surf.children[0].children[0].actor.property.line_width = self.line_width
+    #     self.outline.children[0].children[0].children[0].actor.property.line_width = self.line_width
 
-    def _point_size_changed(self):
-        self.surf.children[0].children[0].actor.property.point_size = self.point_size
-        self.outline.children[0].children[0].children[0].actor.property.point_size = self.point_size
+    # def _point_size_changed(self):
+    #     self.surf.children[0].children[0].actor.property.point_size = self.point_size
+    #     self.outline.children[0].children[0].children[0].actor.property.point_size = self.point_size
 
     def next_slice(self):
         '''View the next slice'''
@@ -565,7 +568,7 @@ class Axis(HasTraits):
 
         self.xfm.widget.set_transform(self.xfm.filter.transform)
         self.xfm.update_pipeline()
-        self.parent.update_slabs()
+    #     self.parent.update_slabs()
 
         np.save("/tmp/last_xfm.npy", self.parent.get_xfm())
 
@@ -602,31 +605,31 @@ class Axis(HasTraits):
             self.planes[0].points = [tuple(pts)]
             pts[self.axis] = pos-gap 
             self.planes[1].points = [tuple(pts)]
-            self.update_slab()
+    #         self.update_slab()
     
-    def update_slab(self):
-        self.slab.update()
-        self.outline.data.set(points=self.slab.output.points, polys=self.slab.output.polys)
-        self.surf.data.set(points=self.slab.output.points, polys=self.slab.output.polys)
+    # def update_slab(self):
+    #     self.slab.update()
+    #     self.outline.data.set(points=self.slab.output.points, polys=self.slab.output.polys)
+    #     self.surf.data.set(points=self.slab.output.points, polys=self.slab.output.polys)
 
 class XAxis(Axis):
     axis = 0
     scene = DelegatesTo('parent', 'scene_x')
-    def _outline_default(self):
-        surf = super(XAxis, self)._outline_default()
-        surf.children[0].filter.transform.rotate_x(-90)
-        surf.children[0].filter.transform.rotate_y(-90)
-        return surf
+    # def _outline_default(self):
+    #     surf = super(XAxis, self)._outline_default()
+    #     surf.children[0].filter.transform.rotate_x(-90)
+    #     surf.children[0].filter.transform.rotate_y(-90)
+    #     return surf
 
 class YAxis(Axis):
     axis = 1
     invert = True
     scene = DelegatesTo('parent', 'scene_y')
-    def _outline_default(self):
-        surf = super(YAxis, self)._outline_default()
-        surf.children[0].filter.transform.rotate_y(90)
-        surf.children[0].filter.transform.rotate_x(90)
-        return surf
+    # def _outline_default(self):
+    #     surf = super(YAxis, self)._outline_default()
+    #     surf.children[0].filter.transform.rotate_y(90)
+    #     surf.children[0].filter.transform.rotate_x(90)
+    #     return surf
 
 class ZAxis(Axis):
     axis = 2
@@ -641,24 +644,28 @@ except:
     outline_reps = tuple(outline_reps)
 
 class Align(HasTraits):
+    # The data
+    data = Array()
+
     # The position of the view
     position = Array(shape=(3,))
 
+    # Display properties
     brightness = Range(-2., 2., value=0.)
     contrast = Range(0., 3., value=1.)
     opacity = Range(0., 1., value=.1)
     colormap = Enum(*lut_manager.lut_mode_list())
     fliplut = Bool
-
-    outlines_visible = Bool(default_value=True)
-    outline_rep = Enum(outline_reps)
-    outline_color = Color(default=options.config.get("mayavi_aligner", "outline_color").encode())
-    line_width = Range(0.5, 10., value=float(options.config.get("mayavi_aligner", "line_width")))
-    point_size = Range(0.5, 10., value=float(options.config.get("mayavi_aligner", "point_size")))
+    # outlines_visible = Bool(default_value=True)
+    # outline_rep = Enum(outline_reps)
+    # outline_color = Color(default=options.config.get("mayavi_aligner", "outline_color").encode())
+    # line_width = Range(0.5, 10., value=float(options.config.get("mayavi_aligner", "line_width")))
+    # point_size = Range(0.5, 10., value=float(options.config.get("mayavi_aligner", "point_size")))
 
     epi_filter = Enum(None, "median", "gradient")
     filter_strength = Range(1, 20, value=3)
 
+    # The 4 views displayed (x, y, z, 3D)
     scene_3d = Instance(MlabSceneModel, ())
     scene_x = Instance(MlabSceneModel, ())
     scene_y = Instance(MlabSceneModel, ())
@@ -704,7 +711,7 @@ class Align(HasTraits):
         nii = nibabel.load(epifilename)
         self.epi_file = nii
         epi = nii.get_data().astype(float).squeeze()
-        if epi.ndim>3:
+        if epi.ndim > 3:
             epi = epi[:,:,:,0]
         self.affine = nii.get_affine()
         base = nii.get_header().get_base_affine()
@@ -764,7 +771,7 @@ class Align(HasTraits):
             np.save("/tmp/last_xfm.npy", self.get_xfm())
 
         xfm.widget.add_observer("EndInteractionEvent", savexfm)
-        xfm.widget.add_observer("EndInteractionEvent", self.update_slabs)
+    #    xfm.widget.add_observer("EndInteractionEvent", self.update_slabs)
         xfm.transform.set_matrix(self.startxfm.ravel())
         xfm.widget.set_transform(xfm.transform)
         return xfm
@@ -820,11 +827,11 @@ class Align(HasTraits):
             ax.update_position()
         self.disable_render = False
 
-    def _outlines_visible_changed(self):
-        self.disable_render = True
-        for ax in [self.x_axis, self.y_axis, self.z_axis]:
-            ax.toggle_outline()
-        self.disable_render = False
+    # def _outlines_visible_changed(self):
+    #     self.disable_render = True
+    #     for ax in [self.x_axis, self.y_axis, self.z_axis]:
+    #         ax.toggle_outline()
+    #     self.disable_render = False
 
     @on_trait_change("colormap, fliplut")
     def update_colormap(self):
@@ -876,11 +883,11 @@ class Align(HasTraits):
         
         self.update_brightness()
 
-    def update_slabs(self, *args, **kwargs):
-        self.disable_render = True
-        for ax in [self.x_axis, self.y_axis, self.z_axis]:
-            ax.update_slab()
-        self.disable_render = False
+    # def update_slabs(self, *args, **kwargs):
+    #     self.disable_render = True
+    #     for ax in [self.x_axis, self.y_axis, self.z_axis]:
+    #         ax.update_slab()
+    #     self.disable_render = False
     
     def get_xfm(self, xfmtype="magnet"):
         if xfmtype in ["anat->epicoord", "coord"]:
@@ -905,14 +912,14 @@ class Align(HasTraits):
         self.xfm.transform.set_matrix(matrix.ravel())
         self.xfm.widget.set_transform(self.xfm.transform)
         self.xfm.update_pipeline()
-        self.update_slabs()
+    #     self.update_slabs()
 
     def undo(self):
         if len(self._undolist) > 0:
             self.xfm.transform.set_matrix(self._undolist[-1].ravel())
             self.xfm.widget.set_transform(self.xfm.transform)
             self.xfm.update_pipeline()
-            self.update_slabs()
+    #         self.update_slabs()
             self._redo = self._undolist.pop()
 
     #---------------------------------------------------------------------------
@@ -944,7 +951,7 @@ class Align(HasTraits):
                                               path=lut_manager.lut_image_dir)),
                         "fliplut",
                         "_", "flip_ud", "flip_lr", "flip_fb", 
-                        "_", Item('outline_color', editor=ColorEditor()), 'outline_rep', 'line_width', 'point_size',
+                        "_", #Item('outline_color', editor=ColorEditor()), 'outline_rep', 'line_width', 'point_size',
                         '_',
                     ),
                     Group(
@@ -959,6 +966,10 @@ class Align(HasTraits):
             )
 
 def get_aligner(subject, xfmname, epifile=None, xfm=None, xfmtype="magnet", decimate=False):
+    """Get aligner interface instance
+    
+    epifile is ignored if xfm exists in database (NOT overwritten, not even optionally)
+    """
     from .database import db
 
     dbxfm = None
