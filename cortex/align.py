@@ -75,7 +75,7 @@ def manual(subject, xfmname, reference=None, **kwargs):
 
     m = get_aligner(subject, xfmname, epifile=reference, **kwargs)
     m.save_callback = view_callback if view_only_mode else save_callback
-    m.configure_traits()
+    #m.configure_traits()
 
     return m
 

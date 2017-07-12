@@ -6,6 +6,7 @@ from traits.api import HasTraits, List, Instance, Array, Bool, Dict, Range, Floa
 from traitsui.api import View, Item, HGroup, Group, ImageEnumEditor, ColorEditor, TextEditor
 
 from tvtk.api import tvtk
+from tvtk.common import configure_input
 from tvtk.pyface.scene import Scene
 
 from mayavi import mlab
@@ -365,10 +366,10 @@ class Axis(HasTraits):
         return [top, bot]
 
     def _slab_default(self):
-        top = tvtk.ClipPolyData(clip_function=self.planes[0], inside_out=1, 
-            input=self.parent.surf.parent.parent.filter.output)
-        bot = tvtk.ClipPolyData(clip_function=self.planes[1], inside_out=1, 
-            input=top.output)
+        top = tvtk.ClipPolyData(clip_function=self.planes[0], inside_out=1)
+        configure_input(top, self.parent.surf.parent.parent.filter)
+        bot = tvtk.ClipPolyData(clip_function=self.planes[1], inside_out=1)
+        configure_input(bot, top)
         bot.update()
         return bot
 
@@ -505,6 +506,7 @@ class Axis(HasTraits):
             color = tuple([c/255. for c in tuple(self.outline_color)])
         except TypeError:
             color = self.outline_color.getRgbF()[:3]
+
         self.surf.children[0].children[0].actor.property.color = color
         self.outline.children[0].children[0].children[0].actor.property.color = color
 
@@ -632,7 +634,7 @@ class ZAxis(Axis):
 
 outline_reps = set(('wireframe', 'points', 'surface'))
 try:
-    default_rep = options.config.get("mayavi_aligner", "outline_rep")
+    default_rep = options.config.get("mayavi_aligner", "outline_rep").encode()
     outline_reps = outline_reps - set([default_rep])
     outline_reps = (default_rep,) + tuple(outline_reps)
 except:
@@ -650,7 +652,7 @@ class Align(HasTraits):
 
     outlines_visible = Bool(default_value=True)
     outline_rep = Enum(outline_reps)
-    outline_color = Color(default=options.config.get("mayavi_aligner", "outline_color"))
+    outline_color = Color(default=options.config.get("mayavi_aligner", "outline_color").encode())
     line_width = Range(0.5, 10., value=float(options.config.get("mayavi_aligner", "line_width")))
     point_size = Range(0.5, 10., value=float(options.config.get("mayavi_aligner", "point_size")))
 
@@ -781,7 +783,7 @@ class Align(HasTraits):
 
         self.opacity = float(options.config.get("mayavi_aligner", "opacity"))
         self.xfm.widget.enabled = False
-        self.colormap = options.config.get("mayavi_aligner", "colormap")
+        self.colormap = options.config.get("mayavi_aligner", "colormap").encode()
 
         self.disable_render = True
         for ax in [self.x_axis, self.y_axis, self.z_axis]:
