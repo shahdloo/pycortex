@@ -54,17 +54,17 @@ class RotationWidget(HasTraits):
         self.center.representation.world_position = self.pos
         self.center.priority = 1
 
-        self.edge = tvtk.HandleWidget()
-        self.edge.set_representation(tvtk.SphereHandleRepresentation())
-        self.edge.representation.world_position = self.pos + (self.radius,0,0)
-        self.edge.priority = 1
+        # self.edge = tvtk.HandleWidget()
+        # self.edge.set_representation(tvtk.SphereHandleRepresentation())
+        # self.edge.representation.world_position = self.pos + (self.radius,0,0)
+        # self.edge.priority = 1
 
-        self.circle = mlab.pipeline.line_source(*self._gen_circle(), figure=figure)
-        self.tube = mlab.pipeline.tube(self.circle, figure=figure)
-        self.surf = mlab.pipeline.surface(self.tube, figure=figure, color=(1,1,1))
-        self.tube.filter.radius = 1
+        #self.circle = mlab.pipeline.line_source(*self._gen_circle(), figure=figure)
+        #self.tube = mlab.pipeline.tube(self.circle, figure=figure)
+        #self.surf = mlab.pipeline.surface(self.tube, figure=figure, color=(1,1,1))
+        #self.tube.filter.radius = 1
 
-        figure.scene.add_widgets([self.center, self.edge])
+        figure.scene.add_widgets([self.center])
         def startmove(obj, evt):
             self.startmove = (self.pos, self.angle, self.radius)
         def endmove(obj, evt):
@@ -73,9 +73,9 @@ class RotationWidget(HasTraits):
                                 self.angle - self.startmove[1], 
                                 self.radius / self.startmove[2])
 
-        self.edge.add_observer("StartInteractionEvent", startmove)
-        self.edge.add_observer("InteractionEvent", self._move_edge)
-        self.edge.add_observer("EndInteractionEvent", endmove)
+        # self.edge.add_observer("StartInteractionEvent", startmove)
+        # self.edge.add_observer("InteractionEvent", self._move_edge)
+        # self.edge.add_observer("EndInteractionEvent", endmove)
         self.center.add_observer("StartInteractionEvent", startmove)
         self.center.add_observer("InteractionEvent", self._move_center)
         self.center.add_observer("EndInteractionEvent", endmove)
@@ -88,16 +88,16 @@ class RotationWidget(HasTraits):
     def _move_center(self, obj=None, evt=None):
         self.pos = self.center.representation.world_position
     
-    def _move_edge(self, obj=None, evt=None):
-        c = self.center.representation.world_position
-        r = self.edge.representation.world_position
+    # def _move_edge(self, obj=None, evt=None):
+    #     c = self.center.representation.world_position
+    #     r = self.edge.representation.world_position
 
-        r -= c
+    #     r -= c
 
-        angle = np.arctan2(r[1], r[0])
-        radius = np.sqrt(np.sum(r**2))
+    #     angle = np.arctan2(r[1], r[0])
+    #     radius = np.sqrt(np.sum(r**2))
 
-        self.set(angle=angle, radius=radius)
+    #     self.set(angle=angle, radius=radius)
     
     def _gen_circle(self):
         t = self._t+self.angle
@@ -105,26 +105,26 @@ class RotationWidget(HasTraits):
         y = self.radius*np.sin(t) + self.pos[1]
         return x, y, np.repeat(self.pos[2], len(t))
     
-    @on_trait_change("pos,angle,radius")
-    def _set_circle(self):
-        if hasattr(self, "circle"):
-            self.center.representation.world_position = self.pos
-            rpos = [self.radius*f(self.angle) for f in [np.cos, np.sin]]
-            self.edge.representation.world_position = self.pos + (rpos+[0])
+    # @on_trait_change("pos,angle,radius")
+    # def _set_circle(self):
+    #     if hasattr(self, "circle"):
+    #         self.center.representation.world_position = self.pos
+    #         rpos = [self.radius*f(self.angle) for f in [np.cos, np.sin]]
+    #         # self.edge.representation.world_position = self.pos + (rpos+[0])
             
-            #self.circle.mlab_source.set(dict(zip(("x", "y", "z"), self._gen_circle())))
-            self.circle.data.points = np.array(self._gen_circle()).T
+    #         #self.circle.mlab_source.set(dict(zip(("x", "y", "z"), self._gen_circle())))
+    #         self.circle.data.points = np.array(self._gen_circle()).T
     
     @on_trait_change("enabled")
     def _enable(self):
         if self.enabled:
             self.center.on()
-            self.edge.on()
+            # self.edge.on()
         else:
             self.center.off()
-            self.edge.off()
+            # self.edge.off()
         
-        self.circle.visible = self.enabled
+        # self.circle.visible = self.enabled
 
 class ThreeDScene(MayaviScene):
     #this will not work for qt4 windows, but its functionality is not important!
@@ -244,7 +244,7 @@ class Axis(HasTraits):
     cursor = Instance(Module)
     surf = Instance(PipelineBase)
     outline = Instance(PipelineBase)
-    slab = Instance(tvtk.ClipPolyData)
+    slab = Instance(PipelineBase)
     handle = Instance(RotationWidget)
     planes = List
 
@@ -366,24 +366,31 @@ class Axis(HasTraits):
         return [top, bot]
 
     def _slab_default(self):
-        top = tvtk.ClipPolyData(clip_function=self.planes[0], inside_out=1)
-        configure_input(top, self.parent.surf.parent.parent.filter)
-        bot = tvtk.ClipPolyData(clip_function=self.planes[1], inside_out=1)
-        configure_input(bot, top)
-        bot.update()
+        top = mlab.pipeline.user_defined(self.parent.xfm, filter="ClipPolyData")
+        top.filter.set(clip_function=self.planes[0], inside_out=1)
+        bot = mlab.pipeline.user_defined(top, filter="ClipPolyData")
+        bot.filter.set(clip_function=self.planes[1], inside_out=1)
+        bot.update_pipeline()
         return bot
+
+        # top = tvtk.ClipPolyData(clip_function=self.planes[0], inside_out=1)
+        # configure_input(top, self.parent.surf.parent.parent.filter)
+        # bot = tvtk.ClipPolyData(clip_function=self.planes[1], inside_out=1)
+        # configure_input(bot, top)
+        # bot.update()
+        # return bot
 
     def _outline_default(self):
         origin, spacing = self.parent.origin, self.parent.spacing
         translate = origin * np.sign(spacing) - np.abs(spacing) / 2.
 
         mlab.figure(self.scene.mayavi_scene)
-        if self.slab.output.points is None or len(self.slab.output.points) < 3:
-            pts = np.array([[0, 0, 0], [0, 0, 0], [0,0,0]])
-            polys = [[0, 1, 2]]
-        else:
-            pts = self.slab.output.points.to_array()
-            polys = self.slab.output.polys.to_array().reshape(-1, 4)[:,1:]
+        # if self.slab.outputs[0].points is None or len(self.slab.outputs[0].points) < 3:
+        #     pts = np.array([[0, 0, 0], [0, 0, 0], [0,0,0]])
+        #     polys = [[0, 1, 2]]
+        # else:
+        pts = self.slab.outputs[0].points.to_array()
+        polys = self.slab.outputs[0].polys.to_array().reshape(-1, 4)[:,1:]
         src = mlab.pipeline.triangular_mesh_source(pts[:,0], pts[:,1], pts[:,2], polys, 
             figure=self.scene.mayavi_scene)
         xfm = mlab.pipeline.transform_data(src, figure=self.scene.mayavi_scene)
@@ -396,34 +403,32 @@ class Axis(HasTraits):
             representation=self.outline_rep)
         surf.actor.property.line_width = self.line_width
         surf.actor.property.point_size = self.point_size
-        return src
+        return surf
 
     def _surf_default(self):
-        if self.slab.output.points is None or len(self.slab.output.points) < 3:
-            pts = np.array([[0, 0, 0], [0, 0, 0], [0,0,0]])
-            polys = [[0, 1, 2]]
-        else:
-            pts = self.slab.output.points.to_array()
-            polys = self.slab.output.polys.to_array().reshape(-1, 4)[:,1:]
-        src = mlab.pipeline.triangular_mesh_source(pts[:,0], pts[:,1], pts[:,2], polys, 
-            figure=self.scene_3d.mayavi_scene)
-        surf = mlab.pipeline.surface(src, 
+        # if self.slab.output.points is None or len(self.slab.output.points) < 3:
+            # pts = np.array([[0, 0, 0], [0, 0, 0], [0,0,0]])
+            # polys = [[0, 1, 2]]
+        # else:
+        #     pts = self.slab.output.points.to_array()
+        #     polys = self.slab.output.polys.to_array().reshape(-1, 4)[:,1:]
+        # src = mlab.pipeline.triangular_mesh_source(pts[:,0], pts[:,1], pts[:,2], polys, 
+        #     figure=self.scene_3d.mayavi_scene)
+        surf = mlab.pipeline.surface(self.slab, 
             color=(1,1,1), 
             figure=self.scene_3d.mayavi_scene, 
             representation=self.outline_rep)
         surf.actor.property.line_width = self.line_width
         surf.actor.property.point_size = self.point_size
-        return src
+        return surf
 
     def _ipw_3d_default(self):
-        # Image plane widget = ipw
         spos = self.position + self.parent.origin * np.sign(self.parent.spacing)
         space = list(np.abs(self.parent.spacing))
         shape = list(np.array(self.parent.epi.shape) / self.parent.padshape)
         space.pop(self.axis)
         shape.pop(self.axis)
         if self.axis == 1:
-            # Flip Y axis (?)
             space = space[::-1]
             shape = shape[::-1]
 
@@ -448,13 +453,11 @@ class Axis(HasTraits):
         extent.pop(self.axis)
         if self.axis == 1:
             extent = extent[::-1]
-        arrow = '===> '
-        print("%sImagePlaneWidget image extent for %s axis:\n%s%r"%('XYZ'[self.axis], arrow, arrow, extent))
+
         side_src = self.ipw_3d.ipw.reslice_output
         # Add a callback on the image plane widget interaction to
         # move the others
         def move_view(obj, evt):
-            # Disable rendering on all scene
             cpos = obj.GetCurrentCursorPosition()
             position = list(cpos*side_src.spacing)[:2]
             position.insert(self.axis, self.position[self.axis])
@@ -510,20 +513,20 @@ class Axis(HasTraits):
         except TypeError:
             color = self.outline_color.getRgbF()[:3]
 
-        self.surf.children[0].children[0].actor.property.color = color
-        self.outline.children[0].children[0].children[0].actor.property.color = color
+        self.surf.actor.property.color = color
+        self.outline.actor.property.color = color
 
     def _outline_rep_changed(self):
-        self.surf.children[0].children[0].actor.property.representation = self.outline_rep
-        self.outline.children[0].children[0].children[0].actor.property.representation = self.outline_rep
+        self.surf.actor.property.representation = self.outline_rep
+        self.outline.actor.property.representation = self.outline_rep
 
     def _line_width_changed(self):
-        self.surf.children[0].children[0].actor.property.line_width = self.line_width
-        self.outline.children[0].children[0].children[0].actor.property.line_width = self.line_width
+        self.surf.actor.property.line_width = self.line_width
+        self.outline.actor.property.line_width = self.line_width
 
     def _point_size_changed(self):
-        self.surf.children[0].children[0].actor.property.point_size = self.point_size
-        self.outline.children[0].children[0].children[0].actor.property.point_size = self.point_size
+        self.surf.actor.property.point_size = self.point_size
+        self.outline.actor.property.point_size = self.point_size
 
     def next_slice(self):
         '''View the next slice'''
@@ -606,19 +609,35 @@ class Axis(HasTraits):
             pts[self.axis] = pos-gap 
             self.planes[1].points = [tuple(pts)]
             self.update_slab()
+            self.ipw.update_pipeline()
     
     def update_slab(self):
-        self.slab.update()
-        self.outline.data.set(points=self.slab.output.points, polys=self.slab.output.polys)
-        self.surf.data.set(points=self.slab.output.points, polys=self.slab.output.polys)
+        self.slab.parent.filter.update()
+        self.slab.update_pipeline()
+
+        if self.slab.outputs[0].number_of_polys < 1:
+            self.outline.visible = False
+        else:
+            self.outline.visible = True
+            self.outline.mlab_source.set(
+                points=self.slab.filter.output.points.to_array(),
+                triangles=self.slab.filter.output.polys.to_array().reshape(-1, 4)[:,1:]
+            )
+
+        #self.surf.update_pipeline()
+        #
+        #self.surf.data.set(points=self.slab.output.points, polys=self.slab.output.polys)
+
+        # self.surf.children[0].children[0].update_pipeline()
+        # self.outline.children[0].children[0].children[0].update_pipeline()
 
 class XAxis(Axis):
     axis = 0
     scene = DelegatesTo('parent', 'scene_x')
     def _outline_default(self):
         surf = super(XAxis, self)._outline_default()
-        surf.children[0].filter.transform.rotate_x(-90)
-        surf.children[0].filter.transform.rotate_y(-90)
+        surf.parent.parent.filter.transform.rotate_x(-90)
+        surf.parent.parent.filter.transform.rotate_y(-90)
         return surf
 
 class YAxis(Axis):
@@ -627,8 +646,8 @@ class YAxis(Axis):
     scene = DelegatesTo('parent', 'scene_y')
     def _outline_default(self):
         surf = super(YAxis, self)._outline_default()
-        surf.children[0].filter.transform.rotate_y(90)
-        surf.children[0].filter.transform.rotate_x(90)
+        surf.parent.parent.filter.transform.rotate_y(90)
+        surf.parent.parent.filter.transform.rotate_x(90)
         return surf
 
 class ZAxis(Axis):
@@ -644,18 +663,15 @@ except:
     outline_reps = tuple(outline_reps)
 
 class Align(HasTraits):
-    # The data
-    #data = Array()
-
     # The position of the view
     position = Array(shape=(3,))
 
-    # Display properties
     brightness = Range(-2., 2., value=0.)
     contrast = Range(0., 3., value=1.)
     opacity = Range(0., 1., value=.1)
     colormap = Enum(*lut_manager.lut_mode_list())
     fliplut = Bool
+
     outlines_visible = Bool(default_value=True)
     outline_rep = Enum(outline_reps)
     outline_color = Color(default=options.config.get("mayavi_aligner", "outline_color").encode())
@@ -665,7 +681,6 @@ class Align(HasTraits):
     epi_filter = Enum(None, "median", "gradient")
     filter_strength = Range(1, 20, value=3)
 
-    # The 4 views displayed (x, y, z, 3D)
     scene_3d = Instance(MlabSceneModel, ())
     scene_x = Instance(MlabSceneModel, ())
     scene_y = Instance(MlabSceneModel, ())
@@ -711,7 +726,7 @@ class Align(HasTraits):
         nii = nibabel.load(epifilename)
         self.epi_file = nii
         epi = nii.get_data().astype(float).squeeze()
-        if epi.ndim > 3:
+        if epi.ndim>3:
             epi = epi[:,:,:,0]
         self.affine = nii.get_affine()
         base = nii.get_header().get_base_affine()
@@ -774,6 +789,7 @@ class Align(HasTraits):
         xfm.widget.add_observer("EndInteractionEvent", self.update_slabs)
         xfm.transform.set_matrix(self.startxfm.ravel())
         xfm.widget.set_transform(xfm.transform)
+        xfm.update_pipeline()
         return xfm
     
     #---------------------------------------------------------------------------
@@ -951,7 +967,7 @@ class Align(HasTraits):
                                               path=lut_manager.lut_image_dir)),
                         "fliplut",
                         "_", "flip_ud", "flip_lr", "flip_fb", 
-                        "_", #Item('outline_color', editor=ColorEditor()), 'outline_rep', 'line_width', 'point_size',
+                        "_", Item('outline_color', editor=ColorEditor()), 'outline_rep', 'line_width', 'point_size',
                         '_',
                     ),
                     Group(
@@ -966,10 +982,6 @@ class Align(HasTraits):
             )
 
 def get_aligner(subject, xfmname, epifile=None, xfm=None, xfmtype="magnet", decimate=False):
-    """Get aligner interface instance
-    
-    epifile is ignored if xfm exists in database (NOT overwritten, not even optionally)
-    """
     from .database import db
 
     dbxfm = None
