@@ -100,7 +100,7 @@ def make_figure(braindata, recache=False, pixelwise=True, thick=32, sampler='nea
     layers = dict(data=data_im)
     # Add curvature
     if with_curvature:
-        curv_im = composite.add_curvature(fig, dataview, extents)
+        curv_im = composite.add_curvature(fig, dataview, extents, cvmin=cvmin, cvmax=cvmax, cvthr=cvthr)
         layers['curvature'] = curv_im
     # Add dropout
     if with_dropout is not False:

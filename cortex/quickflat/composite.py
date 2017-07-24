@@ -10,8 +10,8 @@ from .utils import make_flatmap_image, _make_hatch_image
 
 ### --- Individual compositing functions --- ###
 
-def add_curvature(fig, dataview, extents=None, height=None, threshold=None, contrast=None,
-                  brightness=None, cmap='gray', recache=False):
+def add_curvature(fig, dataview, extents=None, height=None, cvmin=None, cvmax=None,
+                  cvthr=None, cmap='gray', recache=False):
     """Add curvature layer to figure
 
     Parameters
@@ -29,13 +29,6 @@ def add_curvature(fig, dataview, extents=None, height=None, threshold=None, cont
         Whether to apply a threshold to the curvature values to create a binary curvature image
         (one shade for positive curvature, one shade for negative). `None` defaults to value 
         specified in the config file
-    contrast : float, [0-1] or None 
-        WIP: None defaults to config value
-    brightness : float
-        How bright to make average value of curvature. This is not raw brightness (for now); this 
-        scales the minimum and maximum of the color scale for curvature, so the units are in curvature.
-        Positive values will make the zero curvature value lighter and negative values will make the 
-        zero curvatuer value darker. 
     cmap : string
         name for colormap of curvature
     recache : boolean
@@ -55,21 +48,11 @@ def add_curvature(fig, dataview, extents=None, height=None, threshold=None, cont
     curv, _ = make_flatmap_image(curv_vertices, recache=recache, height=height)
     # Option to use thresholded curvature
     default_threshold = config.get('curvature','threshold').lower() in ('true','t','1','y','yes')
-    use_threshold_curvature = default_threshold if threshold is None else threshold
+    use_threshold_curvature = default_threshold if cvthr is None else cvthr
     if use_threshold_curvature:
         curvT = (curv>0).astype(np.float32)
         curvT[np.isnan(curv)] = np.nan
         curv = curvT
-    # Still WIP: Compute min / max for display of curvature based on `contrast` and `brightness` inputs
-    if contrast is None:
-        contrast = float(config.get('curvature', 'contrast'))
-    if brightness is None:
-        brightness = float(config.get('curvature', 'brightness'))
-    cvmin, cvmax = -contrast, contrast
-    if brightness < 0:
-        cvmin += brightness
-    else:
-        cvmax += brightness
     if extents is None:
         extents = _get_extents(fig)
     ax = fig.gca()
@@ -77,8 +60,8 @@ def add_curvature(fig, dataview, extents=None, height=None, threshold=None, cont
             aspect='equal', 
             extent=extents, 
             cmap=cmap, 
-            vmin=cvmin, #float(config.get('curvature','min')) if cvmin is None else cvmin,
-            vmax=cvmax, #float(config.get('curvature','max')) if cvmax is None else cvmax,
+            vmin=float(config.get('curvature','min')) if cvmin is None else cvmin,
+            vmax=float(config.get('curvature','max')) if cvmax is None else cvmax,
             label='curvature',
             zorder=0)
     return cvimg
