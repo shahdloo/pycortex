@@ -586,7 +586,7 @@ def get_overlay(subject, svgfile, pts, polys, remove_medial=False, **kwargs):
     if not os.path.exists(svgfile):
         # Overlay file does not exist yet! We need to create and populate it
         with open(svgfile, "wb") as fp:
-            fp.write(make_svg(pts.copy(), polys))
+            fp.write(make_svg(pts.copy(), polys).encode())
 
         svg = SVGOverlay(svgfile, coords=cullpts, **kwargs)
 
