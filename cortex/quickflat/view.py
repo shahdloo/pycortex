@@ -17,7 +17,7 @@ def make_figure(braindata, recache=False, pixelwise=True, thick=32, sampler='nea
                 linewidth=None, linecolor=None, roifill=None, shadow=None,
                 labelsize=None, labelcolor=None, cutout=None, curvature_brightness=None,
                 curvature_contrast=None, curvature_threshold=None, fig=None, extra_hatch=None,
-                colorbar_ticks=None, colorbar_location=(.4, .07, .2, .04), **kwargs):
+                colorbar_ticks=None, colorbar_location=(.4, .07, .2, .04), roi_list=None, **kwargs):
     """Show a Volume or Vertex on a flatmap with matplotlib.
 
     Note that **kwargs are ONLY present now for backward compatibility / warnings. No kwargs
@@ -145,7 +145,7 @@ def make_figure(braindata, recache=False, pixelwise=True, thick=32, sampler='nea
                                          power=dropout_power)
 
         drop_im = composite.add_hatch(fig, hatch_data, extents=extents, height=height,
-            sampler=sampler)
+            sampler=sampler, **kwargs)
         layers['dropout'] = drop_im
     # Add extra hatching
     if extra_hatch is not None:
@@ -156,7 +156,7 @@ def make_figure(braindata, recache=False, pixelwise=True, thick=32, sampler='nea
     # Add rois
     if with_rois:
         roi_im = composite.add_rois(fig, dataview, extents=extents, height=height, linewidth=linewidth, linecolor=linecolor,
-             roifill=roifill, shadow=shadow, labelsize=labelsize, labelcolor=labelcolor, with_labels=with_labels)
+             roifill=roifill, shadow=shadow, labelsize=labelsize, labelcolor=labelcolor, with_labels=with_labels, roi_list=roi_list)
         layers['rois'] = roi_im
     # Add sulci
     if with_sulci:
@@ -167,8 +167,9 @@ def make_figure(braindata, recache=False, pixelwise=True, thick=32, sampler='nea
     if extra_disp is not None:
         svgfile, layer = extra_disp
         custom_im = composite.add_custom(fig, dataview, svgfile, layer, height=height, extents=extents,
-            linewidth=linewidth, linecolor=linecolor, shadow=shadow, labelsize=labelsize, labelcolor=labelcolor,
-            with_labels=with_labels)
+                                         linewidth=linewidth, linecolor=linecolor, shadow=shadow, labelsize=labelsize,
+                                         labelcolor=labelcolor,
+                                         with_labels=with_labels)
         layers['custom'] = custom_im
     # Add connector lines btw connected vertices
     if with_connected_vertices:
@@ -192,7 +193,7 @@ def make_figure(braindata, recache=False, pixelwise=True, thick=32, sampler='nea
             colorbar = composite.add_colorbar_2d(fig, dataview.cmap,
                 [dataview.vmin, dataview.vmax, dataview.vmin2, dataview.vmax2])
         else:
-            colorbar = composite.add_colorbar(fig, data_im)
+            colorbar = composite.add_colorbar(fig, data_im, colorbar_location=colorbar_location)
         # Reset axis to main figure axis
         plt.axes(ax)
 
