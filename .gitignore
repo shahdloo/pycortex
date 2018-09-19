@@ -49,3 +49,4 @@ nosetests.xml
 *~
 
 *.nfs*
+/cortex/polyutils/exact_geodesic.py
